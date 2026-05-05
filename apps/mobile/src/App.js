@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = "http://localhost:4000";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:4000";
 const APP_STATE_KEY = "ghostbuster.appstate.v1";
 
 const screens = {
@@ -550,4 +550,3 @@ const styles = StyleSheet.create({
     fontSize: 13
   }
 });
-

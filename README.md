@@ -26,6 +26,11 @@ In a third terminal:
 npm run dev:mobile
 ```
 
+For mobile API calls, set:
+```bash
+EXPO_PUBLIC_API_BASE_URL=http://localhost:4000
+```
+
 ## Structure
 ```text
 apps/
