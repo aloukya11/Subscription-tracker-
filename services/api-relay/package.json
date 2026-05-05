@@ -6,6 +6,7 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "node src/server.js",
+    "db:migrate": "node db/migrate.js",
     "lint": "echo \"No lint configured yet\"",
     "test": "echo \"No tests configured yet\""
   },

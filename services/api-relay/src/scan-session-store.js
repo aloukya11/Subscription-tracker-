@@ -161,6 +161,7 @@ class PostgresScanSessionStore {
 async function createScanSessionStore(nowIsoFn) {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
+    console.warn("DATABASE_URL not set. Using in-memory session store.");
     return new InMemoryScanSessionStore(nowIsoFn);
   }
 
@@ -169,6 +170,7 @@ async function createScanSessionStore(nowIsoFn) {
     await postgresStore.healthcheck();
     return postgresStore;
   } catch (error) {
+    console.warn("Postgres unavailable, falling back to in-memory store:", error.message);
     await postgresStore.close().catch(() => {});
     return new InMemoryScanSessionStore(nowIsoFn);
   }
@@ -177,4 +179,3 @@ async function createScanSessionStore(nowIsoFn) {
 module.exports = {
   createScanSessionStore
 };
-

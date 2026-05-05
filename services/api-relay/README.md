@@ -29,5 +29,14 @@ Optional:
 SQL migration is under:
 - `db/migrations/0001_init.sql`
 
+Apply migration:
+```bash
+npm run db:migrate
+```
+
+Expected behavior:
+- If `DATABASE_URL` is valid and reachable, `/health` shows `storageMode: "postgres"`
+- If not reachable, relay logs a fallback warning and runs in `memory` mode
+
 Storage implementations:
 - `src/scan-session-store.js` contains both in-memory and PostgreSQL adapters
