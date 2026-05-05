@@ -47,4 +47,3 @@ Use the Builder agent to implement:
 2. Family Scan APIs (`init`, `submit`, `results`, `revoke`)
 3. Mobile onboarding, review queue, ghost confidence flow
 4. Parent consent and manual submission flow
-
