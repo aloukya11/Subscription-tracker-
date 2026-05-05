@@ -1,0 +1,15 @@
+{
+  "name": "mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Subscription Ghost Buster mobile app",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node index.js",
+    "lint": "echo \"No lint configured yet\"",
+    "test": "echo \"No tests configured yet\""
+  },
+  "keywords": ["mobile", "expo"],
+  "license": "MIT",
+  "type": "commonjs"
+}

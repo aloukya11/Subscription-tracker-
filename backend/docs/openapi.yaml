@@ -1,0 +1,44 @@
+openapi: 3.1.0
+info:
+  title: Family Scan Relay API
+  version: 0.1.0
+servers:
+  - url: http://localhost:4000
+paths:
+  /api/v1/family-scan/init:
+    post:
+      summary: Create a Family Scan session
+      responses:
+        "200":
+          description: Session created
+  /api/v1/family-scan/submit:
+    post:
+      summary: Submit encrypted parent results
+      responses:
+        "202":
+          description: Submission accepted
+  /api/v1/family-scan/results/{sessionId}:
+    get:
+      summary: Fetch encrypted results for child device
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session result payload
+  /api/v1/family-scan/{sessionId}:
+    delete:
+      summary: Revoke and delete a session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Session revoked
+
