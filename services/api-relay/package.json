@@ -9,7 +9,14 @@
     "lint": "echo \"No lint configured yet\"",
     "test": "echo \"No tests configured yet\""
   },
-  "keywords": ["relay", "api"],
+  "keywords": [
+    "relay",
+    "api"
+  ],
   "license": "MIT",
-  "type": "commonjs"
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "zod": "^4.4.3"
+  }
 }
