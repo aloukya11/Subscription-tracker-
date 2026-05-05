@@ -4,7 +4,7 @@ Family Scan relay API for session creation, encrypted result submission, result 
 
 ## Current mode
 - Runtime: `Express`
-- Storage: in-memory (for local development)
+- Storage: PostgreSQL when `DATABASE_URL` is reachable, otherwise in-memory fallback
 - Validation: `zod`
 - Security behavior: hashed tokens, session TTL checks, revoke support
 
@@ -20,9 +20,13 @@ Family Scan relay API for session creation, encrypted result submission, result 
 npm run dev
 ```
 
+Optional:
+- Set `DATABASE_URL` to enable PostgreSQL-backed sessions
+- Keep unset for in-memory local mode
+
 ## Postgres migration
 SQL migration is under:
 - `db/migrations/0001_init.sql`
 
-Next step is replacing the in-memory store with a PostgreSQL repository that maps this schema.
-
+Storage implementations:
+- `src/scan-session-store.js` contains both in-memory and PostgreSQL adapters

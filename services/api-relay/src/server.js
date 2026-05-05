@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const express = require("express");
 const { z } = require("zod");
+const { createScanSessionStore } = require("./scan-session-store");
 
 const port = Number(process.env.API_PORT || 4000);
 const baseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:4000";
@@ -36,31 +37,6 @@ function isExpired(expiresAt) {
   return Date.now() > Date.parse(expiresAt);
 }
 
-class InMemoryScanSessionStore {
-  constructor() {
-    this.sessions = new Map();
-  }
-
-  create(session) {
-    this.sessions.set(session.sessionId, session);
-    return session;
-  }
-
-  get(sessionId) {
-    return this.sessions.get(sessionId) || null;
-  }
-
-  update(sessionId, patch) {
-    const existing = this.get(sessionId);
-    if (!existing) return null;
-    const updated = { ...existing, ...patch, updatedAt: nowIso() };
-    this.sessions.set(sessionId, updated);
-    return updated;
-  }
-}
-
-const store = new InMemoryScanSessionStore();
-
 const initSchema = z.object({
   requesterDeviceIdHash: z.string().min(8).max(256),
   expiresInMinutes: z.number().int().min(5).max(24 * 60).optional(),
@@ -77,15 +53,27 @@ const submitSchema = z.object({
   resultCiphertext: z.string().min(32).max(200000)
 });
 
+function asyncHandler(handler) {
+  return async (req, res, next) => {
+    try {
+      await handler(req, res, next);
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+let store;
+
 app.get("/health", (_req, res) => {
   return res.status(200).json({
     status: "ok",
     service: "api-relay",
-    storageMode: "memory"
+    storageMode: store ? store.mode : "booting"
   });
 });
 
-app.post("/api/v1/family-scan/init", (req, res) => {
+app.post("/api/v1/family-scan/init", asyncHandler(async (req, res) => {
   const parsed = initSchema.safeParse(req.body || {});
   if (!parsed.success) {
     return res.status(400).json({ error: "invalid_request", details: parsed.error.issues });
@@ -97,7 +85,7 @@ app.post("/api/v1/family-scan/init", (req, res) => {
   const expiresInMinutes = parsed.data.expiresInMinutes || defaultTtlMinutes;
   const expiresAt = futureIso(expiresInMinutes);
 
-  store.create({
+  await store.create({
     sessionId,
     sessionIdHash: sha256(sessionId),
     requesterDeviceIdHash: parsed.data.requesterDeviceIdHash,
@@ -121,9 +109,9 @@ app.post("/api/v1/family-scan/init", (req, res) => {
     readToken,
     expiresAt
   });
-});
+}));
 
-app.post("/api/v1/family-scan/submit", (req, res) => {
+app.post("/api/v1/family-scan/submit", asyncHandler(async (req, res) => {
   const parsed = submitSchema.safeParse(req.body || {});
   if (!parsed.success) {
     return res.status(400).json({ error: "invalid_request", details: parsed.error.issues });
@@ -132,14 +120,14 @@ app.post("/api/v1/family-scan/submit", (req, res) => {
   const bearer = parseBearerToken(req.header("authorization"));
   if (!bearer) return res.status(401).json({ error: "missing_token" });
 
-  const session = store.get(parsed.data.sessionId);
+  const session = await store.get(parsed.data.sessionId);
   if (!session) return res.status(404).json({ error: "session_not_found" });
 
   if (session.deletedAt || session.status === "revoked") {
     return res.status(410).json({ error: "session_revoked" });
   }
   if (isExpired(session.expiresAt)) {
-    store.update(session.sessionId, { status: "expired", deletedAt: nowIso() });
+    await store.update(session.sessionId, { status: "expired", deletedAt: nowIso() });
     return res.status(410).json({ error: "session_expired" });
   }
 
@@ -147,7 +135,7 @@ app.post("/api/v1/family-scan/submit", (req, res) => {
     return res.status(401).json({ error: "invalid_token" });
   }
 
-  store.update(session.sessionId, {
+  await store.update(session.sessionId, {
     status: "completed",
     resultCiphertext: parsed.data.resultCiphertext,
     resultMetadata: parsed.data.summaryCounts,
@@ -156,20 +144,20 @@ app.post("/api/v1/family-scan/submit", (req, res) => {
   });
 
   return res.status(202).json({ accepted: true });
-});
+}));
 
-app.get("/api/v1/family-scan/results/:sessionId", (req, res) => {
+app.get("/api/v1/family-scan/results/:sessionId", asyncHandler(async (req, res) => {
   const bearer = parseBearerToken(req.header("authorization"));
   if (!bearer) return res.status(401).json({ error: "missing_token" });
 
-  const session = store.get(req.params.sessionId);
+  const session = await store.get(req.params.sessionId);
   if (!session) return res.status(404).json({ error: "session_not_found" });
 
   if (session.deletedAt || session.status === "revoked") {
     return res.status(410).json({ error: "session_revoked" });
   }
   if (isExpired(session.expiresAt)) {
-    store.update(session.sessionId, { status: "expired", deletedAt: nowIso() });
+    await store.update(session.sessionId, { status: "expired", deletedAt: nowIso() });
     return res.status(410).json({ error: "session_expired" });
   }
 
@@ -185,30 +173,43 @@ app.get("/api/v1/family-scan/results/:sessionId", (req, res) => {
     summaryCounts: session.resultMetadata,
     resultCiphertext: session.resultCiphertext
   });
-});
+}));
 
-app.delete("/api/v1/family-scan/:sessionId", (req, res) => {
+app.delete("/api/v1/family-scan/:sessionId", asyncHandler(async (req, res) => {
   const bearer = parseBearerToken(req.header("authorization"));
   if (!bearer) return res.status(401).json({ error: "missing_token" });
 
-  const session = store.get(req.params.sessionId);
+  const session = await store.get(req.params.sessionId);
   if (!session) return res.status(404).json({ error: "session_not_found" });
 
   const hashed = sha256(bearer);
   const allowed = hashed === session.uploadTokenHash || hashed === session.readTokenHash;
   if (!allowed) return res.status(401).json({ error: "invalid_token" });
 
-  store.update(session.sessionId, {
+  await store.update(session.sessionId, {
     status: "revoked",
     deletedAt: nowIso(),
     resultCiphertext: null,
     resultMetadata: null
   });
   return res.status(204).send();
-});
+}));
 
 app.use((_req, res) => res.status(404).json({ error: "not_found" }));
 
-app.listen(port, () => {
-  console.log("api-relay listening on http://localhost:" + port);
+app.use((error, _req, res, _next) => {
+  console.error("Unhandled API error:", error.message);
+  return res.status(500).json({ error: "internal_error" });
+});
+
+async function start() {
+  store = await createScanSessionStore(nowIso);
+  app.listen(port, () => {
+    console.log("api-relay listening on http://localhost:" + port + " storage=" + store.mode);
+  });
+}
+
+start().catch((error) => {
+  console.error("Failed to boot api-relay:", error);
+  process.exit(1);
 });
