@@ -5,6 +5,7 @@ const { createScanSessionStore } = require("./scan-session-store");
 
 const port = Number(process.env.API_PORT || 4000);
 const baseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:4000";
+const parentWebBaseUrl = process.env.PARENT_WEB_BASE_URL || "http://localhost:3000";
 const defaultTtlMinutes = Number(process.env.FAMILY_SCAN_TTL_MINUTES || 1440);
 
 const app = express();
@@ -105,7 +106,7 @@ app.post("/api/v1/family-scan/init", asyncHandler(async (req, res) => {
 
   return res.status(200).json({
     sessionId,
-    parentUrl: `${baseUrl}/family-scan/${sessionId}?uploadToken=${uploadToken}`,
+    parentUrl: `${parentWebBaseUrl}/family-scan/${sessionId}?uploadToken=${uploadToken}`,
     readToken,
     expiresAt
   });

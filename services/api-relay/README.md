@@ -23,6 +23,7 @@ npm run dev
 Optional:
 - Set `DATABASE_URL` to enable PostgreSQL-backed sessions
 - Keep unset for in-memory local mode
+- Set `PARENT_WEB_BASE_URL` so `init` returns links to the web consent app (default `http://localhost:3000`)
 
 ## Postgres migration
 SQL migration is under:
