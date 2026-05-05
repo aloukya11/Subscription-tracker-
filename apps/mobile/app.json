@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Subscription Ghost Buster",
+    "slug": "subscription-ghost-buster",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "platforms": [
+      "android",
+      "ios",
+      "web"
+    ]
+  }
+}
+

@@ -1,2 +1,5 @@
-console.log("Mobile scaffold ready. Replace with Expo app bootstrap in Builder phase.");
+import { registerRootComponent } from "expo";
+import App from "./src/App";
+
+registerRootComponent(App);
 
